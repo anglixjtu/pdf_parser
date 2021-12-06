@@ -21,6 +21,8 @@ def parse_args():
     parser.add_argument('--end_pageid', type=int, default=-1,
                         help='parse ending at page #: -1 for the last page of pdf;'
                         '0 for begin_pageid+1', dest='end_pageid')
+    parser.add_argument('--pid_h', type=int, default=150,
+                        help='the height of page id show in the pdf', dest='pid_h')
     parser.add_argument('-viz_debug', action='store_true', dest='viz_debug',
                         help='trigger visual debug or not')
     parser.add_argument('-get_imgs', action='store_true', dest='get_imgs',
@@ -49,7 +51,7 @@ def main():
     checked = [False] * len(sp_codes)'''
     for pageid in range(args.begin_pageid, args.end_pageid, 1):
         page = pdf.pages[pageid]
-        extractor = PageParser(page)
+        extractor = PageParser(page, pid_h=args.pid_h)
         text_lines = extractor.get_text()
         tables = extractor.get_tables()
         page_sequence = extractor.merge_page(text_lines, tables)

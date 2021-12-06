@@ -24,8 +24,9 @@ import os
 
 
 class PageParser(object):
-    def __init__(self, page):
-        self.margins = [15, 15, 0, 0]  # hyper-parameter
+    def __init__(self, page, pid_h=150, margins=[15, 15, 0, 0]):
+        self.margins = margins # hyper-parameter
+        self.pid_h = pid_h
 
         self.data = []
         self.page = page
@@ -109,9 +110,6 @@ class PageParser(object):
             page_sequence, itable = \
                 self.insert_table(line_y0, tables[key], itable, page_sequence)
 
-        
-
-
         return page_sequence
 
     def insert_table(self, line_y0, tables, itable, seq):
@@ -144,8 +142,7 @@ class PageParser(object):
             bbox = block.bbox
             
             if isinstance(block, LTTextBoxHorizontal):
-                # TODO: set HP
-                if block.y1 < 150 and block.y1 > self.py0:
+                if block.y1 < self.pid_h and block.y1 > self.py0:
                     self.pid = int(block.get_text().strip('\n'))
                     continue
                 if not isvisible(bbox, self.pbox, margins=self.margins):

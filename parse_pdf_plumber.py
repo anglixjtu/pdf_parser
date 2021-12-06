@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument('--save_folder', type=str, dest='save_folder',
                         default='output/manuals',
                         help='which target folder to save outputs')
-    parser.add_argument('--begin_pageid', type=int, default=68,
+    parser.add_argument('--begin_pageid', type=int, default=3,
                         help='parse from page #', dest='begin_pageid')
     parser.add_argument('--end_pageid', type=int, default=-1,
                         help='parse ending at page #: -1 for the last page of pdf;'
@@ -43,9 +43,9 @@ def main():
         args.end_pageid = len(pdf.pages)
 
     # loop for each page
-    '''sp_codes = ['\u3000',  '\uf020', '\uf02a', '\uf06c', '\uf06e', '\uf074', '\uf075', '\uf0ae',
-                '\uf0b7', '\uf0bd', '\uf0be', '\uf0c6',
-                '\uf0e1', '\uf0e2', '\uf0e3', '\uf0e4']
+    '''sp_codes = ['\u200b',  '\uf0e2', '〓', '\uf06e', '◯', '◀', '■', '〔',
+                '〕', '〈', '×', '>',
+                '<', '〉', '○', '°']
     checked = [False] * len(sp_codes)'''
     for pageid in range(args.begin_pageid, args.end_pageid, 1):
         page = pdf.pages[pageid]
@@ -61,7 +61,7 @@ def main():
                 print(sp_code)
                 checked[i] = True'''
 
-        page_elements['text'].append({'pageid': page.page_number,
+        page_elements['text'].append({'pageid': extractor.pid,
                                       'sequence': page_sequence})
 
         # for images
@@ -85,6 +85,8 @@ def main():
 
         writer.writeheader()
         for page in page_elements['text']:
+            if len(page['sequence']) == 0:
+                continue
             row = {'page': page['pageid'], 'sequence': page['sequence']}
             writer.writerow(row)
 

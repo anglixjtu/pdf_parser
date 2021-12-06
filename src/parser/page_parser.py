@@ -142,9 +142,14 @@ class PageParser(object):
         itext = 0
         for iblock, block in enumerate(self.blocks):
             bbox = block.bbox
-
-            if isinstance(block, LTTextBoxHorizontal) and\
-                    isvisible(bbox, self.pbox, margins=self.margins):
+            
+            if isinstance(block, LTTextBoxHorizontal):
+                # TODO: set HP
+                if block.y1 < 150 and block.y1 > self.py0:
+                    self.pid = int(block.get_text().strip('\n'))
+                    continue
+                if not isvisible(bbox, self.pbox, margins=self.margins):
+                    continue
 
                 bbox = miner2img(bbox, self.pbox)
                 if self.intables(bbox):

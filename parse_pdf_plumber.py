@@ -16,9 +16,9 @@ def parse_args():
     parser.add_argument('--save_folder', type=str, dest='save_folder',
                         default='output/manuals',
                         help='which target folder to save outputs')
-    parser.add_argument('--begin_pageid', type=int, default=3,
+    parser.add_argument('--begin_pageid', type=int, default=18,
                         help='parse from page #', dest='begin_pageid')
-    parser.add_argument('--end_pageid', type=int, default=-1,
+    parser.add_argument('--end_pageid', type=int, default=0,
                         help='parse ending at page #: -1 for the last page of pdf;'
                         '0 for begin_pageid+1', dest='end_pageid')
     parser.add_argument('--pid_h', type=int, default=150,
@@ -52,9 +52,9 @@ def main():
     for pageid in range(args.begin_pageid, args.end_pageid, 1):
         page = pdf.pages[pageid]
         extractor = PageParser(page, pid_h=args.pid_h)
-        text_lines = extractor.get_text()
+        text_blocks = extractor.get_text()
         tables = extractor.get_tables()
-        page_sequence = extractor.merge_page(text_lines, tables)
+        page_sequences = extractor.get_sequences(text_blocks, tables)
         # p73,table, 162
         '''for i, sp_code in enumerate(sp_codes):
             if sp_code in page_sequence and not checked[i]:
@@ -63,8 +63,9 @@ def main():
                 print(sp_code)
                 checked[i] = True'''
 
-        page_elements['text'].append({'pageid': extractor.pid,
-                                      'sequence': page_sequence})
+        for seq in page_sequences:
+            page_elements['text'].append({'pageid': extractor.pid,
+                                          'sequence': seq})
 
         # for images
         if args.get_imgs:

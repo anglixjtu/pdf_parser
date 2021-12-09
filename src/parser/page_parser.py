@@ -424,7 +424,7 @@ class PageParser(object):
                             row[i] = '(' + headers[i] + ') ' + \
                                 item + partitions[i]
 
-            if raw_table['x1'] >= self.middle:
+            if raw_table['x0'] >= self.middle:
                 # important: using the right x position for table!
                 tables['right'].append((raw_table['y0'], raw_table))
             else:

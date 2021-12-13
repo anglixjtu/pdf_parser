@@ -113,15 +113,8 @@ class PageParser(object):
 
     def check_table_seq(self, line_y0, tables, itable):
         table_seqs = []
-        for table_y0, table in tables[itable:]:
+        for table_y0, seq in tables[itable:]:
             if table_y0 < line_y0:
-                len_t = len(table['content'])
-                len_c = len(table['content'][0])
-                start_row = 0 if len_t == 1 or len_c == 1 else 1
-                seq = ''
-                for row in table['content'][start_row:]:
-                    for item in row:
-                        seq += item.replace('\n', '')
                 itable += 1
                 table_seqs.append(seq)
             else:
@@ -409,26 +402,33 @@ class PageParser(object):
         tables = {'left': [], 'right': []}
         for raw_table in self.raw_tables:
             headers = raw_table['content'][0]
+            # check the number of columns/row
+            #  and fix empty headers
+            n_columns = 0
             for ih, header in enumerate(headers):
                 if header is None:
                     headers[ih] = ''
-            partitions = [', '] * (len(headers)-1) + ['。']
-            if len(raw_table['content']) > 1 and \
-               len(raw_table['content'][0]) > 1:
-                for row in raw_table['content'][1:]:
-                    for i, item in enumerate(row):
-                        if item is None:
-                            row[i] = '(' + headers[i] + ') ' + \
-                                ' ' + partitions[i]
-                        else:
-                            row[i] = '(' + headers[i] + ') ' + \
-                                item + partitions[i]
+                elif header is not '':
+                    n_columns += 1
+            n_rows = len(raw_table['content'])
+            # no special format for tables having single column/row
+            if n_columns == 1 or n_rows == 1:
+                # TODO: set HP for seperator
+                table_seq = self.get_table_seq(
+                    raw_table['content'][0:], seperator='。')
+            else:
+                # for tables having multiple columns
+                # TODO: set HP for partitions
+                partitions = [', '] * (len(headers)-1) + ['。']
+                # TODO: set table format as HP
+                table_seq = self.align_header_format(
+                    headers, raw_table['content'][1:], partitions)
 
             if raw_table['x0'] >= self.middle:
                 # important: using the right x position for table!
-                tables['right'].append((raw_table['y0'], raw_table))
+                tables['right'].append((raw_table['y0'], table_seq))
             else:
-                tables['left'].append((raw_table['y0'], raw_table))
+                tables['left'].append((raw_table['y0'], table_seq))
 
         tables['left'] = sorted(tables['left'], key=lambda x: x[0])
         tables['right'] = sorted(tables['right'], key=lambda x: x[0])
@@ -436,6 +436,28 @@ class PageParser(object):
         #  2. Extract buttons
         # buttons = self.detect_table_buttons(tables)
         return tables
+
+    def align_header_format(self, headers, body, partitions):
+        seq = ''
+        for row in body:
+            for i, item in enumerate(row):
+                if item is None:
+                    row[i] = '(' + headers[i] + ') ' + \
+                        ' ' + partitions[i]
+                else:
+                    row[i] = '(' + headers[i] + ') ' + \
+                        item + partitions[i]
+                seq += row[i].replace('\n', '')
+        return seq
+
+    def get_table_seq(self, body, seperator='。'):
+        seq = ''
+        for row in body:
+            for item in row:
+                if item is '':
+                    continue
+                seq += item.replace('\n', '') + seperator
+        return seq
 
     # ============================================
     # functions for images and drawings extraction

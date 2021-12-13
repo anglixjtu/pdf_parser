@@ -24,7 +24,7 @@ import os
 
 
 class PageParser(object):
-    def __init__(self, page, pid_h=150, margins=[15, 15, 0, 0]):
+    def __init__(self, page, pid_h=30, margins=[15, 15, 0, 0]):
         self.margins = margins  # hyper-parameter
         self.pid_h = pid_h
 
@@ -142,7 +142,8 @@ class PageParser(object):
             bbox = block.bbox
 
             if isinstance(block, LTTextBoxHorizontal):
-                if block.y1 < self.pid_h and block.y1 > self.py0:
+                #if block.y1 < self.pid_h and block.y1 > self.py0:
+                if block.y1 < self.pid_h+self.py0 and block.y1 > self.py0:
                     self.pid = int(block.get_text().strip('\n'))
                     continue
                 if not isvisible(bbox, self.pbox, margins=self.margins):

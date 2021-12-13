@@ -16,12 +16,12 @@ def parse_args():
     parser.add_argument('--save_folder', type=str, dest='save_folder',
                         default='output/manuals',
                         help='which target folder to save outputs')
-    parser.add_argument('--begin_pageid', type=int, default=18,
+    parser.add_argument('--begin_pageid', type=int, default=3,
                         help='parse from page #', dest='begin_pageid')
     parser.add_argument('--end_pageid', type=int, default=0,
                         help='parse ending at page #: -1 for the last page of pdf;'
                         '0 for begin_pageid+1', dest='end_pageid')
-    parser.add_argument('--pid_h', type=int, default=150,
+    parser.add_argument('--pid_h', type=int, default=30,
                         help='the height of page id show in the pdf', dest='pid_h')
     parser.add_argument('-viz_debug', action='store_true', dest='viz_debug',
                         help='trigger visual debug or not')

@@ -19,10 +19,12 @@ def parse_args():
     parser.add_argument('--begin_pageid', type=int, default=3,
                         help='parse from page #', dest='begin_pageid')
     parser.add_argument('--end_pageid', type=int, default=0,
-                        help='parse ending at page #: -1 for the last page of pdf;'
+                        help='parse ending at page #: -1 for the'
+                        'last page of pdf;'
                         '0 for begin_pageid+1', dest='end_pageid')
     parser.add_argument('--pid_h', type=int, default=30,
-                        help='the height of page id show in the pdf', dest='pid_h')
+                        help='the height of page id show in the pdf',
+                        dest='pid_h')
     parser.add_argument('-viz_debug', action='store_true', dest='viz_debug',
                         help='trigger visual debug or not')
     parser.add_argument('-get_imgs', action='store_true', dest='get_imgs',
@@ -66,6 +68,8 @@ def main():
         for seq in page_sequences:
             page_elements['text'].append({'pageid': extractor.pid,
                                           'sequence': seq})
+            # page_elements['text'].append({'pageid': page.page_number,
+            #                               'sequence': seq})
 
         # for images
         if args.get_imgs:

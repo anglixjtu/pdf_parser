@@ -7,8 +7,14 @@ def get_raw_tables(page):
     width = x1.real - x0.real
     height = y1.real - y0.real
 
+    '''table_settings = {"vertical_strategy": "lines_strict",
+                      "horizontal_strategy": "lines_strict"}'''
+
     tables = page.find_tables()
     table_id = 1
+
+    tables = remove_none_tables(tables)
+
     for itable, table in enumerate(tables):
         tx0, ty0, tx1, ty1 = table.bbox[0]-x0, table.bbox[1]-y0, \
             table.bbox[2]-x0, table.bbox[3]-y0
@@ -70,6 +76,36 @@ def get_raw_tables(page):
     return data
 
 
+    def check_header(self, block, color='DeviceGray'):
+        '''Check if the block is the header of table by assuming
+           the header text color is the same with the given color'''
+        for line in block._objs:
+            bbox = line.bbox
+            bbox = miner2img(bbox, self.pbox)
+            line.set_bbox(bbox)
+            is_header = True
+            for char in line._objs:
+                if isinstance(char, LTAnno):
+                    continue
+                cbbox = char.bbox
+                cbbox = miner2img(cbbox, self.pbox)
+                char.set_bbox(cbbox)
+                if char.ncs.name is not color:
+                    is_header = False
+                    break
+            
+            if is_header:
+                # check the raw table
+                for table in self.raw_tables:
+                    tbbox = cell['bbox']
+
+
+
+
+
+        debug = True
+
+
 def match_table_text(tables, texts):
     def is_contain(table_bbox, text_bbox):
         tolerance = 2
@@ -97,3 +133,29 @@ def match_table_text(tables, texts):
                     text['cell_bbox'] = cell
 
     return texts
+
+
+## =====================================================
+##         Table filters
+## =====================================================
+def remove_none_tables(raw_tables):
+    """Remove tables that have NONE cells.
+
+    Args:
+        raw_tables (PdfPlumber tabels): [description]
+    """
+    filtered_tables = []
+    for table in raw_tables:
+        table_content = table.extract()
+        contain_none = False
+        for row_content in table_content:
+            for cell_content in row_content:
+                if cell_content is None:
+                    contain_none = True
+                    break
+            if contain_none is None:
+                break
+    
+        if not contain_none:
+            filtered_tables.append(table)
+    return filtered_tables

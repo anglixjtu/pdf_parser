@@ -1,4 +1,4 @@
-
+import numpy as np
 
 def get_raw_tables(page):
     data = []
@@ -13,7 +13,8 @@ def get_raw_tables(page):
     tables = page.find_tables()
     table_id = 1
 
-    tables = remove_none_tables(tables)
+    # tables = remove_none_tables(tables)
+    tables = remove_1d_tables(tables)
 
     for itable, table in enumerate(tables):
         tx0, ty0, tx1, ty1 = table.bbox[0]-x0, table.bbox[1]-y0, \
@@ -35,7 +36,7 @@ def get_raw_tables(page):
         if tx0 > 0 and tx0 < width and tx1 > 0 and tx1 < width and \
                 ty0 > 0 and ty0 < height and ty1 > 0 and ty1 < height:
             table_content = table.extract()
-            all_null = True
+            '''all_null = True
             for row in table_content:
                 for cell in row:
                     if cell is not None:
@@ -45,33 +46,33 @@ def get_raw_tables(page):
                 if not all_null:
                     break
             if (not all_null) and len(table_content) > 1 and\
-                    len(table_content[0]) > 1:
-                cells = []
-                '''if len(table_content[0])*len(table_content) != len(table.cells):
+                    len(table_content[0]) > 1:'''
+            cells = []
+            '''if len(table_content[0])*len(table_content) != len(table.cells):
                     debug = True'''
-                for irow, row in enumerate(table.rows):
-                    for icell, cell in enumerate(row.cells):
-                        if cell is None:
-                            for icrow, check_row in enumerate(table.rows):
-                                if (row.bbox[1] >= check_row.bbox[1]) and\
-                                        (row.bbox[3] <= check_row.bbox[3]):
-                                    table_content[irow][icell] = \
-                                        table_content[icrow][icell]
+            for irow, row in enumerate(table.rows):
+                for icell, cell in enumerate(row.cells):
+                    if cell is None:
+                        for icrow, check_row in enumerate(table.rows):
+                            if (row.bbox[1] >= check_row.bbox[1]) and\
+                                (row.bbox[3] <= check_row.bbox[3]):
+                                table_content[irow][icell] = \
+                                    table_content[icrow][icell]
 
-                                    cell = {}
+                                cell = {}
 
-                                    check_bbox = True
+                                check_bbox = True
                         # cells.append(
                         #    (cell[0]-x0, cell[1]-y0, cell[2]-x0, cell[3]-y0))
-                table_data = {'x0': tx0, 'y0': ty0, 'x1': tx1, 'y1': ty1,
-                              'height': ty1-ty0, 'width': tx1-tx0,
-                              'content': table_content,
-                              'table_id': table_id,
-                              'rows': len(table_content),
-                              'cols': len(table_content[0])}  # ,
-                # 'cells': cells}
-                table_id += 1
-                data.append(table_data)
+            table_data = {'x0': tx0, 'y0': ty0, 'x1': tx1, 'y1': ty1,
+                          'height': ty1-ty0, 'width': tx1-tx0,
+                          'content': table_content,
+                          'table_id': table_id,
+                          'rows': len(table_content),
+                          'cols': len(table_content[0])}  # ,
+            # 'cells': cells}
+            table_id += 1
+            data.append(table_data)
 
     return data
 
@@ -139,7 +140,7 @@ def match_table_text(tables, texts):
 ##         Table filters
 ## =====================================================
 def remove_none_tables(raw_tables):
-    """Remove tables that have NONE cells.
+    """Remove tables that have NONE cells in each row/column.
 
     Args:
         raw_tables (PdfPlumber tabels): [description]
@@ -159,3 +160,33 @@ def remove_none_tables(raw_tables):
         if not contain_none:
             filtered_tables.append(table)
     return filtered_tables
+
+
+def remove_1d_tables(raw_tables):
+    """Remove the tables that have one column or one row.
+
+    Args:
+        raw_tables (PdfPlumber tabels): [description]
+    """
+    filtered_tables = []
+    
+    for table in raw_tables:
+        n_row, n_col = 0, 0
+        table_content = table.extract()
+        # print(table_content)
+        table_flag = (np.array(table_content) != None) &\
+                     (np.array(table_content) != '') &\
+                     (np.array(table_content) != ' ') # True for cells that are not empty
+
+        # print(table_flag)
+
+        for row_flag in table_flag[1:]:  # do not count the header
+            curt_n_col = row_flag.sum()
+            n_col = max(n_col, curt_n_col)
+            if curt_n_col > 0:
+                n_row += 1
+    
+        if (n_row > 1) and (n_col > 1):
+            filtered_tables.append(table)
+    return filtered_tables
+

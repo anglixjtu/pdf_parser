@@ -15,10 +15,10 @@ def parse_args():
     # Parse Arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, dest='file',
-                        default='/data/manual/open_data/harrier_navi_201706.pdf',
+                        default='data/manual/open_data/harrier_navi_201706.pdf',
                         help='the path to which pdf file to parse')
     parser.add_argument('--save_folder', type=str, dest='save_folder',
-                        default='/data/manual/open_data',
+                        default='data/manual/open_data',
                         help='which target folder to save outputs')
     parser.add_argument('--begin_pageid', type=int, default=13,
                         help='parse from page #', dest='begin_pageid')
@@ -33,7 +33,8 @@ def parse_args():
                         default=None,
                         help='The output file stores the mapping of special codes')
     parser.add_argument('--in_spcode', type=str, dest='in_spcode',
-                        default='harrier_navi_201706_spcodes',
+                        default='D:/ARIH/Test-Cases-Generation/workspace/code/'
+                                'test_cases_generation/config/harrier_navi_201706_spcodes.json',
                         help='The input file stores the mapping of special codes')
     parser.add_argument('--check_spcode', action='store_true', dest='check_spcode',
                         help='check the loaded/stored spcodes or not')
@@ -67,7 +68,7 @@ def main():
     if args.in_spcode is None:
         sp_codes = {}
     else:
-        in_sp_file = os.path.join(args.save_folder, args.in_spcode+'.json')
+        in_sp_file = args.in_spcode
         sp_codes = load_sp_codes(in_sp_file)
 
     for pageid in range(args.begin_pageid, args.end_pageid, 1):

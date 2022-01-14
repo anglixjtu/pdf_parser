@@ -1,5 +1,6 @@
 from logging import debug
 from typing import no_type_check
+import pdf2image
 
 from pdfplumber import page
 from .table_extractor import get_raw_tables
@@ -8,7 +9,8 @@ from pdfminer.layout import (LTTextBoxHorizontal,
                              LTTextLineHorizontal,
                              LTRect,
                              LTCurve,
-                             LTAnno)
+                             LTAnno,
+                             LTChar)
 from operator import attrgetter
 from .image_saver import save_image
 
@@ -17,6 +19,7 @@ from skimage.measure import label, regionprops
 import matplotlib.pyplot as plt
 from PIL import ImageDraw
 import os
+import re
 
 # TODO: check buttons
 # TODO: check buttons in text
@@ -24,13 +27,14 @@ import os
 
 
 class PageParser(object):
-    def __init__(self, page, pid_h=30, margins=[15, 15, 0, 0]):
+    def __init__(self, page, pid_h=30, margins=[15, 15, 0, 0], sp_codes={}, pageid=0):
         self.margins = margins  # hyper-parameter
         self.pid_h = pid_h
 
         self.data = []
         self.page = page
-        self.pid = page.page_number
+        self.pid = page.page_number    # the number showed on the pdf file
+        self.pageid = pageid    # the page id of the pdf file
         self.px0, self.py0, self.px1, self.py1 = \
             page.cropbox[0], page.cropbox[1],\
             page.cropbox[2], page.cropbox[3]
@@ -38,6 +42,7 @@ class PageParser(object):
         self.ph = float(self.py1 - self.py0)
         self.pbox = page.cropbox
         self.middle = (self.pw + 2) / 2
+        self.sp_codes = sp_codes
 
         self.raw_tables = get_raw_tables(page)
         self.blocks = page._layout._objs
@@ -94,6 +99,7 @@ class PageParser(object):
                 table_seqs, itable = \
                     self.check_table_seq(
                         block[0].y0, tables[key], itable)
+
                 sequences += table_seqs
 
                 # combine lines in the block
@@ -109,7 +115,12 @@ class PageParser(object):
                     line_y0, tables[key], itable)
             sequences += table_seqs
 
-        return sequences
+        out_sequences = []
+        for s in sequences:
+            out_sequences.append(s)
+
+        return out_sequences
+
 
     def check_table_seq(self, line_y0, tables, itable):
         table_seqs = []
@@ -141,8 +152,11 @@ class PageParser(object):
         for iblock, block in enumerate(self.blocks):
             bbox = block.bbox
 
+            if iblock == 36:
+                debug = True
+
             if isinstance(block, LTTextBoxHorizontal):
-                #if block.y1 < self.pid_h and block.y1 > self.py0:
+                # if block.y1 < self.pid_h and block.y1 > self.py0:
                 if block.y1 < self.pid_h+self.py0 and block.y1 > self.py0:
                     self.pid = int(block.get_text().strip('\n'))
                     continue
@@ -150,9 +164,12 @@ class PageParser(object):
                     continue
 
                 bbox = miner2img(bbox, self.pbox)
-                if self.intables(bbox):
-                    continue
                 block.set_bbox(bbox)
+
+                self.find_sp_codes(block)
+
+                if self.intables(bbox):
+                    continue           
 
                 for line in block._objs:
                     bbox = line.bbox
@@ -409,7 +426,7 @@ class PageParser(object):
             for ih, header in enumerate(headers):
                 if header is None:
                     headers[ih] = ''
-                elif header is not '':
+                elif header != '':
                     n_columns += 1
             n_rows = len(raw_table['content'])
             # no special format for tables having single column/row
@@ -455,7 +472,7 @@ class PageParser(object):
         seq = ''
         for row in body:
             for item in row:
-                if item is '':
+                if item == '' or item is None:
                     continue
                 seq += item.replace('\n', '') + seperator
         return seq
@@ -516,3 +533,36 @@ class PageParser(object):
                     images[key].append(img_info)
 
         return images['left'] + images['right']
+
+
+    # =====================================================
+    # functions for handling symbols and special charecters
+    # Ref: https://github.com/euske/pdfminer/issues/122
+    # https://stackoverflow.com/questions/50773909/what-
+    # to-do-with-cids-in-text-extracted-by-pdfminer
+    #
+    # =====================================================
+    def find_sp_codes(self, block):
+        block_str = block.get_text()
+        # print(block_str)
+        block_sp_codes = re.findall(r'\(cid\:\d+\)', block_str)
+        for sp_code in block_sp_codes:
+            if sp_code not in self.sp_codes.keys():
+                # block_bbox = miner2img(block.bbox, self.pbox)
+                block_bbox = block.bbox
+
+                find_pos = False
+                for line in block._objs:
+                    for char in line._objs:
+                        if isinstance(char, LTChar):
+                            if char.get_text() == sp_code:
+                                char_bbox = miner2img(char.bbox, self.pbox)
+                                find_pos = True
+                                break
+                    if find_pos: break
+
+                self.sp_codes[sp_code] = {'pageid':self.pageid,
+                                          'block_bbox': block_bbox,
+                                          'char_bbox': char_bbox,
+                                          'char':''}
+

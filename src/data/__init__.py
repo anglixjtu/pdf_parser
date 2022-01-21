@@ -5,7 +5,8 @@ from transformers import (T5Tokenizer,
                           MBartTokenizerFast)
 
 
-def create_dataloader(tokenizer_name, input_file, split_pages,
+def create_dataloader(tokenizer_name, input_file, 
+                      split_pages, target_file=None,
                       input_max_len=512, target_max_len=512,
                       use_keyword=False, batch_size=8,
                       num_workers=4,
@@ -24,6 +25,7 @@ def create_dataloader(tokenizer_name, input_file, split_pages,
 
     dataset = PageData(tokenizer=tokenizer,
                        input_file=input_file,
+                       target_file=target_file,
                        split_pages=split_pages,
                        input_max_len=input_max_len,
                        target_max_len=target_max_len,

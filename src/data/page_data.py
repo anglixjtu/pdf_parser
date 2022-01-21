@@ -3,13 +3,18 @@ import os
 import torch
 from torch.utils.data import Dataset, DataLoader
 from src.preprocessor.normalization import normalize_text
+import numpy as np
 
 
 class PageData(Dataset):
-    def __init__(self, tokenizer, input_file, split_pages,
+    def __init__(self, tokenizer, input_file,
+                 split_pages,
+                 target_file=None,
                  input_max_len=512, target_max_len=512,
-                 use_keyword=False):
+                 use_keyword=False,
+                 mlm=False):
         self.input_file = input_file
+        self.target_file = target_file
         self.split_pages = split_pages
 
         self.input_max_len = input_max_len
@@ -18,6 +23,8 @@ class PageData(Dataset):
         self.inputs = []
         self.targets = []
         self.use_keyword = use_keyword
+
+        self.mlm = mlm # masked language modeling for pretraining
 
         self._build()
 
@@ -39,7 +46,7 @@ class PageData(Dataset):
         target = f"{target}"
         return input, target
 
-    def _process_pages(self, input_df):
+    def _process_pages(self, input_df, target_df=None):
         """
         For each pages, concatenate paragraphs and add seperators.
         Text normalization is performed after concatenation.
@@ -63,19 +70,28 @@ class PageData(Dataset):
                 page_seqs[i] += para_seq + '。'
                 concated_page = page
 
-        return page_seqs
+        target_seqs = []
+        if target_df is not None:
+            for page, target_seq in zip(target_df.page, target_df.target):
+                if page in self.split_pages:
+                    target_seqs.append(normalize_text(target_seq))
+        else:
+            target_seqs = [''] * len(page_seqs)
+        return page_seqs, target_seqs
 
     def _build(self):
         """
         Generate input and target tokens.
         """
         input_df = pd.read_csv(self.input_file)
-        page_seqs = self._process_pages(input_df)
+        target_df = None
+        if self.target_file and not self.mlm:
+            target_df = pd.read_csv(self.target_file)
+        
+        page_seqs, target_seqs = self._process_pages(input_df, target_df)    
 
-        for page_seq in page_seqs:
-            test_cases = ''
-
-            input, target = self._make_record(page_seq, test_cases)
+        for page_seq, target_seq in zip(page_seqs, target_seqs):
+            input, target = self._make_record(page_seq, target_seq)
 
             tokenized_inputs = self.tokenizer.batch_encode_plus(
                 [input], max_length=self.input_max_len, truncation=True,
@@ -89,3 +105,5 @@ class PageData(Dataset):
 
             self.inputs.append(tokenized_inputs)
             self.targets.append(tokenized_targets)
+
+
